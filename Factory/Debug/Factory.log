@@ -1,0 +1,4 @@
+﻿  Source.cpp
+c:\users\gameuser\desktop\college work\games eng\factory\source.cpp(61): warning C4018: '<': signed/unsigned mismatch
+  Factory.vcxproj -> C:\Users\gameuser\Desktop\College Work\Games Eng\Factory\Debug\Factory.exe
+  Factory.vcxproj -> C:\Users\gameuser\Desktop\College Work\Games Eng\Factory\Debug\Factory.pdb (Partial PDB)
