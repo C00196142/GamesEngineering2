@@ -3,68 +3,60 @@
 #include <mutex>
 #include <vector>
 
+using namespace std;
+
 struct Semaphore
 {
 public:
 	Semaphore() {};
-	Semaphore(int x)
+	~Semaphore() {};
+
+	int rw = 1;
+	int mutexR = 1;
+
+	void P(int &mR)
 	{
-		count = x;
+		mR--;
 	}
 
-	void P()
+	void V(int &mR)
 	{
-		std::unique_lock<decltype(mutex)> lock(mutex);
-		while (count <= 0)
-		{
-			cVar.wait(lock);
-		}
-		count--;
+		mR++;
 	}
-
-	void V()
-	{
-		std::unique_lock<decltype(mutex)> lock(mutex);
-		count++;
-		cVar.notify_one();
-	}
-
-private:
-	int count = 0;
-	std::mutex mutex;
-	std::condition_variable cVar;
 
 };
 
-struct Database
-{
-public:
-
-
-private:
-
-
-
-};
 
 int nr = 0;
+Semaphore m_semaphore;
 
 void Reader()
 {
 	bool running = true;
 	while (running)
 	{
+		cout <<  " idREADER: " << this_thread::get_id() << endl;
+		this_thread::sleep_for(chrono::seconds(1));
+		m_semaphore.P(m_semaphore.mutexR);
 		nr++;
 		if (nr == 1)
 		{
-
+			m_semaphore.P(m_semaphore.rw);
 		}
-
+		
+		//LOCK//
+		m_semaphore.V(m_semaphore.mutexR);
+		
+		cout << " READING DATABASE... " << endl;
+		m_semaphore.P(m_semaphore.mutexR);
 		nr--;
 		if (nr == 0)
 		{
-
+			m_semaphore.V(m_semaphore.rw);
 		}
+
+		m_semaphore.V(m_semaphore.mutexR);
+		//LOCK//
 	}
 }
 
@@ -73,14 +65,28 @@ void Writer()
 	bool running = true;
 	while (running)
 	{
+		cout << " idWRITER: " << this_thread::get_id() << endl;
+		this_thread::sleep_for(chrono::seconds(1));
 
+		m_semaphore.P(m_semaphore.rw);
+		cout << " WRITING TO DATABASE... " << endl;
+		m_semaphore.V(m_semaphore.rw);
 	}
 }
 
 int main()
 {
-	std::thread Reader(Reader);
-	std::thread Writer(Writer);
+	std::thread Reader1(Reader);
+	std::thread Reader2(Reader);
+
+	std::thread Writer1(Writer);
+	std::thread Writer2(Writer);
+
+	Reader1.join();
+	Reader2.join();
+
+	Writer1.join();
+	Writer2.join();
 
 	system("PAUSE");
 }
