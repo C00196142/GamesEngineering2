@@ -1,3 +1,6 @@
+//Thomas Butler
+//C00196142
+
 #include <iostream>
 #include <thread>
 #include <mutex>
@@ -8,55 +11,66 @@ using namespace std;
 struct Semaphore
 {
 public:
-	Semaphore() {};
+	Semaphore(int sem = 1) :count(sem) {};
 	~Semaphore() {};
 
-	int rw = 1;
-	int mutexR = 1;
+	int count;
+	mutex m;
 
-	void P(int &mR)
+	condition_variable cVar;
+
+	void P()
 	{
-		mR--;
+		unique_lock<decltype(m)> lock(m);
+
+		while (count <= 0)
+		{
+			cVar.wait(lock);
+		}
+		count--;
 	}
 
-	void V(int &mR)
+	void V()
 	{
-		mR++;
+		unique_lock<decltype(m)> lock(m);
+
+		count++;
+		cVar.notify_one();
 	}
 
 };
 
 
 int nr = 0;
-Semaphore m_semaphore;
+Semaphore mutexR;
+Semaphore rW;
 
 void Reader()
 {
 	bool running = true;
 	while (running)
 	{
-		cout <<  " idREADER: " << this_thread::get_id() << endl;
-		this_thread::sleep_for(chrono::seconds(1));
-		m_semaphore.P(m_semaphore.mutexR);
+		//cout <<  " idREADER:" << this_thread::get_id() << endl;
+		mutexR.P();
 		nr++;
 		if (nr == 1)
 		{
-			m_semaphore.P(m_semaphore.rw);
+			rW.P();
+			cout << " READING FILE... " << endl;
 		}
 		
-		//LOCK//
-		m_semaphore.V(m_semaphore.mutexR);
+		mutexR.V();
 		
-		cout << " READING DATABASE... " << endl;
-		m_semaphore.P(m_semaphore.mutexR);
+		mutexR.P();
 		nr--;
 		if (nr == 0)
 		{
-			m_semaphore.V(m_semaphore.rw);
+			rW.V();
+			cout << " READER RELEASING FILE " << endl;
 		}
 
-		m_semaphore.V(m_semaphore.mutexR);
-		//LOCK//
+		mutexR.V();
+		this_thread::sleep_for(chrono::seconds(1));
 	}
 }
 
@@ -65,12 +79,16 @@ void Writer()
 	bool running = true;
 	while (running)
 	{
-		cout << " idWRITER: " << this_thread::get_id() << endl;
-		this_thread::sleep_for(chrono::seconds(1));
+		//cout << " idWRITER:" << this_thread::get_id() << endl;
 
-		m_semaphore.P(m_semaphore.rw);
-		cout << " WRITING TO DATABASE... " << endl;
-		m_semaphore.V(m_semaphore.rw);
+		rW.P();
+		cout << " WRITING TO FILE... " << endl;
+
+		//WRITE TO DATABASE
+
+		cout << " WRITER RELEASING FILE" << endl;
+		rW.V();
+		this_thread::sleep_for(chrono::seconds(1));
 	}
 }
 
